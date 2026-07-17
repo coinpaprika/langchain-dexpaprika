@@ -1,0 +1,25 @@
+# langchain-dexpaprika
+
+> LangChain tools for the DexPaprika API: free, keyless DEX market data across 36 blockchains (33M+ tokens, 36M+ pools). No API key, no signup, no credential handling.
+
+## Package
+
+- PyPI: langchain-dexpaprika
+- Import: langchain_dexpaprika
+- Install: pip install -U langchain-dexpaprika
+- Requires: Python >=3.10, langchain-core >=1.0
+
+## Tools
+
+- dexpaprika_search (DexPaprikaSearch): free-text search for tokens, pools, and DEXes; returns contract addresses and network ids for the other tools
+- dexpaprika_token_details (DexPaprikaTokenDetails): price, FDV, liquidity, pool count, and 24h/6h/1h volume for one token on one network
+- dexpaprika_token_pools (DexPaprikaTokenPools): pools where a token trades, sortable by volume, liquidity, transactions, age, or price change
+- dexpaprika_pool_ohlcv (DexPaprikaPoolOHLCV): historical OHLCV candles for one pool, intervals 1m to 24h, up to 366 candles
+- dexpaprika_networks (DexPaprikaNetworks): all supported networks with their exact ids and activity stats
+- DexPaprikaToolkit: all five tools over one shared HTTP client
+
+## Links
+
+- API docs: https://docs.dexpaprika.com
+- Agent integration guide: https://agents.dexpaprika.com
+- Repository: https://github.com/coinpaprika/langchain-dexpaprika

@@ -1,0 +1,55 @@
+# Publishes to PyPI via trusted publishing (OIDC, no tokens).
+#
+# The PyPI pending publisher for langchain-dexpaprika is bound to exactly:
+#   repository:  coinpaprika/langchain-dexpaprika
+#   workflow:    release.yml
+#   environment: pypi
+# Do not rename this file or the environment; either change breaks the binding.
+#
+# Release flow: merge to main, create a GitHub release with tag vX.Y.Z,
+# this workflow runs checks, builds with uv, and publishes dist/ to PyPI.
+
+name: release
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - name: Install
+        run: uv sync --extra test
+      - name: Ruff lint
+        run: uv run ruff check .
+      - name: Mypy
+        run: uv run mypy src/
+      - name: Unit tests (sockets blocked)
+        run: uv run pytest --disable-socket --allow-unix-socket tests/unit_tests/
+
+  publish:
+    runs-on: ubuntu-latest
+    needs: [checks]
+    environment: pypi
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+      - name: Build sdist and wheel
+        run: uv build
+      - name: Publish to PyPI (trusted publishing)
+        uses: pypa/gh-action-pypi-publish@release/v1

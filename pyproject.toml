@@ -1,0 +1,75 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "langchain-dexpaprika"
+version = "0.1.0"
+description = "LangChain tools for the DexPaprika API: free, keyless DEX market data across 36 blockchains"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.10,<4.0"
+authors = [{ name = "CoinPaprika" }]
+keywords = [
+  "langchain",
+  "dexpaprika",
+  "coinpaprika",
+  "dex",
+  "defi",
+  "crypto",
+  "blockchain",
+  "agents",
+  "tools",
+]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+]
+dependencies = [
+  "langchain-core>=1.0.0,<2.0.0",
+  "httpx>=0.27",
+]
+
+[project.urls]
+Homepage = "https://github.com/coinpaprika/langchain-dexpaprika"
+Repository = "https://github.com/coinpaprika/langchain-dexpaprika"
+Documentation = "https://docs.dexpaprika.com"
+Changelog = "https://github.com/coinpaprika/langchain-dexpaprika/releases"
+
+[project.optional-dependencies]
+test = [
+  "langchain-tests~=1.1",
+  "pytest>=8",
+  "pytest-asyncio>=0.26",
+  "pytest-socket>=0.7",
+  "pytest-mock>=3.14",
+  "mypy>=1.15",
+  "ruff>=0.11",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/langchain_dexpaprika"]
+
+[tool.pytest.ini_options]
+addopts = "--strict-markers --strict-config --durations=5"
+# asyncio_mode = "auto" is required: langchain-tests async cases get skipped without it.
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.mypy]
+strict = true
