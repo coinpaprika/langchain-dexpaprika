@@ -3,10 +3,10 @@
 [![PyPI version](https://img.shields.io/pypi/v/langchain-dexpaprika)](https://pypi.org/project/langchain-dexpaprika/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-DexPaprika tools for LangChain agents. No API key, no signup, no rate-limit
-negotiation: the [DexPaprika API](https://docs.dexpaprika.com) is free and
-keyless, so your agent gets DEX market data from 36 blockchains (33M+ tokens,
-36M+ pools) the moment you install the package.
+DexPaprika tools for LangChain agents. No API key, no signup: the
+[DexPaprika API](https://docs.dexpaprika.com) is keyless, so your agent gets
+DEX market data across every supported blockchain (33M+ tokens, 36M+ pools)
+as soon as you install the package.
 
 We built these tools for LLM consumption: descriptions tell the model exactly
 which parameters exist and where to get their values, error messages quote the
@@ -42,12 +42,18 @@ price, liquidity), pools, and DEXes.
 | `dexpaprika_token_details` | `DexPaprikaTokenDetails` | Price, FDV, liquidity, pool count, and 24h/6h/1h volume with buy/sell breakdown for one token on one network. |
 | `dexpaprika_token_pools` | `DexPaprikaTokenPools` | Pools where a token trades, sortable by volume, liquidity, transactions, age, price, or 24h price change. |
 | `dexpaprika_pool_ohlcv` | `DexPaprikaPoolOHLCV` | Historical OHLCV candles for one pool, intervals from 1m to 24h, up to 366 candles per call. |
-| `dexpaprika_networks` | `DexPaprikaNetworks` | All 36 supported networks with their exact ids, 24h volume, transactions, and pool counts. |
+| `dexpaprika_networks` | `DexPaprikaNetworks` | Every supported network with its exact id, 24h volume, transactions, and pool counts. |
 
 ## Use the toolkit in an agent
 
-`DexPaprikaToolkit` bundles all five tools over one shared HTTP client. With
-`langchain` installed and a chat model configured:
+`DexPaprikaToolkit` bundles all five tools over one shared HTTP client. The
+example below drives them with an Anthropic model, so install the provider and
+set its key first (swap in any chat model you prefer):
+
+```bash
+pip install -U "langchain[anthropic]"
+export ANTHROPIC_API_KEY=...
+```
 
 ```python
 from langchain.agents import create_agent

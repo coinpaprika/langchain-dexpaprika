@@ -1,8 +1,8 @@
 """LangChain tools for the DexPaprika API.
 
-Free, keyless DEX market data across 36 blockchains: 33M+ tokens, 36M+ pools.
-No API key, no signup. See https://docs.dexpaprika.com for API documentation
-and https://agents.dexpaprika.com for the agent integration guide.
+Keyless DEX market data across every network DexPaprika covers: 33M+ tokens,
+36M+ pools. No API key, no signup. See https://docs.dexpaprika.com for API
+documentation and https://agents.dexpaprika.com for the agent integration guide.
 """
 
 from importlib import metadata
@@ -16,9 +16,9 @@ from langchain_dexpaprika.token_pools import DexPaprikaTokenPools
 from langchain_dexpaprika.toolkit import DexPaprikaToolkit
 
 try:
-    __version__ = metadata.version(__package__ or "langchain-dexpaprika")
+    __version__ = metadata.version("langchain-dexpaprika")
 except metadata.PackageNotFoundError:  # pragma: no cover - only during development
-    __version__ = ""
+    __version__ = "0.0.0"
 
 __all__ = [
     "DexPaprikaAPIWrapper",
