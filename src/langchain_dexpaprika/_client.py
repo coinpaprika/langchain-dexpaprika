@@ -10,13 +10,15 @@ from __future__ import annotations
 
 import asyncio
 import json
+import threading
 import time
 from importlib import metadata
 from typing import Any
+from urllib.parse import quote
 
 import httpx
 from langchain_core.tools import ToolException
-from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, ValidationError
 
 DEFAULT_BASE_URL = "https://api.dexpaprika.com"
 DEFAULT_RETRY_AFTER_SECONDS = 20.0
@@ -37,8 +39,45 @@ def truncate(text: str | None, limit: int) -> str | None:
 
 
 def compact_json(data: Any) -> str:
-    """Serialize tool output as compact JSON to keep token usage low."""
-    return json.dumps(data, separators=(",", ":"), default=str)
+    """Serialize tool output as compact JSON to keep token usage low.
+
+    ``ensure_ascii=False`` keeps non-ASCII text as itself instead of \\uXXXX
+    escapes, which otherwise inflate CJK and emoji output several times over and
+    waste the very context budget the truncation limits exist to save.
+    """
+    return json.dumps(data, separators=(",", ":"), ensure_ascii=False, default=str)
+
+
+def encode_path_segment(value: str, *, field: str) -> str:
+    """Percent-encode one URL path segment, rejecting dot-only segments.
+
+    ``quote(value, safe="")`` leaves "." and ".." untouched because dots are
+    unreserved, and httpx then resolves them per RFC 3986, so a bare ".." would
+    climb out of the ``/networks/{network}/...`` prefix and hit a different
+    endpoint. Reject any all-dots segment before it reaches the wire.
+    """
+    if value and set(value) <= {"."}:
+        raise ToolException(
+            f"Invalid {field} {value!r}: expected a concrete identifier, not a path segment."
+        )
+    return quote(value, safe="")
+
+
+def format_validation_error(exc: ValidationError) -> str:
+    """Render a pydantic ValidationError as one actionable line for an agent.
+
+    Tools wire this to ``handle_validation_error`` so bad arguments (wrong enum
+    casing, a missing field, an out-of-range int) come back as a tool message
+    the model can correct from, not a raw exception. pydantic's own message
+    already lists the allowed values, so we keep the field and message and drop
+    the header and docs URL.
+    """
+    parts = []
+    for err in exc.errors():
+        loc = ".".join(str(p) for p in err.get("loc", ())) or "input"
+        parts.append(f"{loc}: {err.get('msg', 'invalid value')}")
+    detail = "; ".join(parts) or str(exc)
+    return f"Invalid tool input. {detail}. Correct the arguments and call the tool again."
 
 
 def _retry_after_seconds(response: httpx.Response) -> float:
@@ -132,19 +171,28 @@ class DexPaprikaAPIWrapper(BaseModel):
     transport: Any = Field(default=None, exclude=True, repr=False)
 
     _sync_client: httpx.Client | None = PrivateAttr(default=None)
+    _client_lock: threading.Lock = PrivateAttr(default_factory=threading.Lock)
 
     def _headers(self) -> dict[str, str]:
         return {"User-Agent": USER_AGENT, "Accept": "application/json"}
 
     def _get_sync_client(self) -> httpx.Client:
-        if self._sync_client is None or self._sync_client.is_closed:
-            self._sync_client = httpx.Client(
-                base_url=self.base_url,
-                timeout=self.timeout,
-                headers=self._headers(),
-                transport=self.transport,
-            )
-        return self._sync_client
+        # Double-checked locking: the toolkit shares one wrapper across all five
+        # tools, so parallel first calls in threads would otherwise each build a
+        # client and orphan all but one unclosed. The lock makes the lazy init
+        # single-flight without paying for it on the common already-built path.
+        client = self._sync_client
+        if client is not None and not client.is_closed:
+            return client
+        with self._client_lock:
+            if self._sync_client is None or self._sync_client.is_closed:
+                self._sync_client = httpx.Client(
+                    base_url=self.base_url,
+                    timeout=self.timeout,
+                    headers=self._headers(),
+                    transport=self.transport,
+                )
+            return self._sync_client
 
     def _new_async_client(self) -> httpx.AsyncClient:
         # We build a fresh async client per call. Caching one would bind its

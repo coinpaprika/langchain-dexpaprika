@@ -2,14 +2,19 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Any, Literal
-from urllib.parse import quote
 
 from langchain_core.callbacks import AsyncCallbackManagerForToolRun, CallbackManagerForToolRun
 from langchain_core.tools import BaseTool
 from pydantic import BaseModel, Field
 
-from langchain_dexpaprika._client import DexPaprikaAPIWrapper, compact_json
+from langchain_dexpaprika._client import (
+    DexPaprikaAPIWrapper,
+    compact_json,
+    encode_path_segment,
+    format_validation_error,
+)
 
 Interval = Literal["1m", "5m", "10m", "15m", "30m", "1h", "6h", "12h", "24h"]
 
@@ -23,10 +28,10 @@ class DexPaprikaPoolOHLCVInput(BaseModel):
     pool_address: str = Field(
         description="Pool contract address, e.g. from dexpaprika_token_pools."
     )
-    start: str = Field(
+    start: str | int = Field(
         description="REQUIRED start of the window: 'YYYY-MM-DD', RFC3339, or Unix seconds."
     )
-    end: str | None = Field(
+    end: str | int | None = Field(
         default=None,
         description="Optional end of the window, same formats as start.",
     )
@@ -69,14 +74,15 @@ class DexPaprikaPoolOHLCV(BaseTool):
     )
     args_schema: type[BaseModel] = DexPaprikaPoolOHLCVInput
     handle_tool_error: bool = True
+    handle_validation_error: bool | str | Callable[..., str] | None = format_validation_error
     api_wrapper: DexPaprikaAPIWrapper = Field(default_factory=DexPaprikaAPIWrapper)
 
     def _run(
         self,
         network: str,
         pool_address: str,
-        start: str,
-        end: str | None = None,
+        start: str | int,
+        end: str | int | None = None,
         interval: Interval = "24h",
         limit: int = 30,
         inversed: bool = False,
@@ -94,8 +100,8 @@ class DexPaprikaPoolOHLCV(BaseTool):
         self,
         network: str,
         pool_address: str,
-        start: str,
-        end: str | None = None,
+        start: str | int,
+        end: str | int | None = None,
         interval: Interval = "24h",
         limit: int = 30,
         inversed: bool = False,
@@ -111,12 +117,14 @@ class DexPaprikaPoolOHLCV(BaseTool):
 
 
 def _path(network: str, pool_address: str) -> str:
-    return f"/networks/{quote(network, safe='')}/pools/{quote(pool_address, safe='')}/ohlcv"
+    net = encode_path_segment(network, field="network")
+    pool = encode_path_segment(pool_address, field="pool_address")
+    return f"/networks/{net}/pools/{pool}/ohlcv"
 
 
 def _params(
-    start: str,
-    end: str | None,
+    start: str | int,
+    end: str | int | None,
     interval: str,
     limit: int,
     inversed: bool,

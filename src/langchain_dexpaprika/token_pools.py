@@ -2,14 +2,19 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Any, Literal
-from urllib.parse import quote
 
 from langchain_core.callbacks import AsyncCallbackManagerForToolRun, CallbackManagerForToolRun
-from langchain_core.tools import BaseTool
+from langchain_core.tools import BaseTool, ToolException
 from pydantic import BaseModel, Field
 
-from langchain_dexpaprika._client import DexPaprikaAPIWrapper, compact_json
+from langchain_dexpaprika._client import (
+    DexPaprikaAPIWrapper,
+    compact_json,
+    encode_path_segment,
+    format_validation_error,
+)
 
 OrderBy = Literal[
     "volume_usd_24h",
@@ -69,6 +74,7 @@ class DexPaprikaTokenPools(BaseTool):
     )
     args_schema: type[BaseModel] = DexPaprikaTokenPoolsInput
     handle_tool_error: bool = True
+    handle_validation_error: bool | str | Callable[..., str] | None = format_validation_error
     api_wrapper: DexPaprikaAPIWrapper = Field(default_factory=DexPaprikaAPIWrapper)
 
     def _run(
@@ -107,7 +113,7 @@ class DexPaprikaTokenPools(BaseTool):
 
 
 def _path(network: str) -> str:
-    return f"/networks/{quote(network, safe='')}/pools/search"
+    return f"/networks/{encode_path_segment(network, field='network')}/pools/search"
 
 
 def _params(token_address: str, order_by: str, sort: str, limit: int) -> dict[str, Any]:
@@ -127,8 +133,10 @@ def _not_found_message(network: str, token_address: str) -> str:
     )
 
 
-def _shape(data: dict[str, Any]) -> dict[str, Any]:
+def _shape(data: Any) -> dict[str, Any]:
     """Pass pools through untouched, keeping the cursor so agents can paginate."""
+    if not isinstance(data, dict):
+        raise ToolException("DexPaprika API returned an unexpected response shape for pools.")
     return {
         "results": data.get("results") or [],
         "has_next_page": data.get("has_next_page", False),

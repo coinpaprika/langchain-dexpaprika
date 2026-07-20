@@ -2,14 +2,20 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Any
-from urllib.parse import quote
 
 from langchain_core.callbacks import AsyncCallbackManagerForToolRun, CallbackManagerForToolRun
-from langchain_core.tools import BaseTool
+from langchain_core.tools import BaseTool, ToolException
 from pydantic import BaseModel, Field
 
-from langchain_dexpaprika._client import DexPaprikaAPIWrapper, compact_json, truncate
+from langchain_dexpaprika._client import (
+    DexPaprikaAPIWrapper,
+    compact_json,
+    encode_path_segment,
+    format_validation_error,
+    truncate,
+)
 
 _DESCRIPTION_LIMIT = 280
 # The API also returns 30m/15m/5m/1m windows; we drop them to keep the output
@@ -54,6 +60,7 @@ class DexPaprikaTokenDetails(BaseTool):
     )
     args_schema: type[BaseModel] = DexPaprikaTokenDetailsInput
     handle_tool_error: bool = True
+    handle_validation_error: bool | str | Callable[..., str] | None = format_validation_error
     api_wrapper: DexPaprikaAPIWrapper = Field(default_factory=DexPaprikaAPIWrapper)
 
     def _run(
@@ -84,7 +91,9 @@ class DexPaprikaTokenDetails(BaseTool):
 
 
 def _path(network: str, token_address: str) -> str:
-    return f"/networks/{quote(network, safe='')}/tokens/{quote(token_address, safe='')}"
+    net = encode_path_segment(network, field="network")
+    addr = encode_path_segment(token_address, field="token_address")
+    return f"/networks/{net}/tokens/{addr}"
 
 
 def _not_found_message(network: str, token_address: str) -> str:
@@ -95,8 +104,10 @@ def _not_found_message(network: str, token_address: str) -> str:
     )
 
 
-def _shape(data: dict[str, Any]) -> dict[str, Any]:
+def _shape(data: Any) -> dict[str, Any]:
     """Trim long descriptions and drop sub-hour summary windows."""
+    if not isinstance(data, dict):
+        raise ToolException("DexPaprika API returned an unexpected response shape for the token.")
     shaped = dict(data)
     if shaped.get("description"):
         shaped["description"] = truncate(shaped["description"], _DESCRIPTION_LIMIT)
