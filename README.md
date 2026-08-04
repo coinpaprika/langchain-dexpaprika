@@ -3,10 +3,10 @@
 [![PyPI version](https://img.shields.io/pypi/v/langchain-dexpaprika)](https://pypi.org/project/langchain-dexpaprika/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-DexPaprika tools for LangChain agents. No API key, no signup: the
-[DexPaprika API](https://docs.dexpaprika.com) is keyless, so your agent gets
-DEX market data across every supported blockchain (33M+ tokens, 36M+ pools)
-as soon as you install the package.
+DexPaprika tools for LangChain agents. No API key and no signup to start: the
+[DexPaprika API](https://docs.dexpaprika.com) free tier is keyless, so your agent
+gets DEX market data across every supported blockchain (36 chains, 33M+ tokens,
+36M+ pools) as soon as you install the package.
 
 We built these tools for LLM consumption: descriptions tell the model exactly
 which parameters exist and where to get their values, error messages quote the
@@ -19,8 +19,10 @@ compact JSON with multi-kilobyte token descriptions trimmed.
 pip install -U langchain-dexpaprika
 ```
 
-No credentials to configure. There is no environment variable to set because
-there is no API key.
+No credentials to configure. This package calls the keyless free tier and sends
+no API key, so there is no environment variable to set. The free tier is 200,000
+credits per month per IP at 30 requests per minute, with data delayed up to 15
+seconds; see https://dexpaprika.com/pricing for the paid tiers.
 
 ## Quickstart
 

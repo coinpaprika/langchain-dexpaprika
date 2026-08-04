@@ -1,6 +1,6 @@
 # langchain-dexpaprika
 
-> LangChain tools for the DexPaprika API: keyless DEX market data across every supported blockchain (33M+ tokens, 36M+ pools). No API key, no signup, no credential handling.
+> LangChain tools for the DexPaprika API: keyless DEX market data across every supported blockchain (36 chains, 33M+ tokens, 36M+ pools). The free tier needs no API key and no signup; this package sends no credentials.
 
 ## Package
 

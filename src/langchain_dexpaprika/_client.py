@@ -2,8 +2,8 @@
 
 We keep every HTTP concern in one place: base URL, timeout, User-Agent,
 retry-on-429, and the translation of API error responses into ToolException
-messages that an agent can act on. The API is keyless, so there is no
-credential handling anywhere in this package.
+messages that an agent can act on. This package calls the keyless free tier,
+so there is no credential handling anywhere in it.
 """
 
 from __future__ import annotations
@@ -150,8 +150,8 @@ class DexPaprikaAPIWrapper(BaseModel):
     """Shared sync and async HTTP wrapper for the DexPaprika REST API.
 
     One instance can back any number of tools; the toolkit shares a single
-    wrapper across all five. No API key is needed: the DexPaprika API is
-    public and keyless.
+    wrapper across all five. No API key is needed: this wrapper calls the
+    public keyless free tier.
 
     Attributes:
         base_url: API origin. Override it to point tools at a mock server in

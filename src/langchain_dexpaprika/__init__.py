@@ -1,8 +1,9 @@
 """LangChain tools for the DexPaprika API.
 
-Keyless DEX market data across every network DexPaprika covers: 33M+ tokens,
-36M+ pools. No API key, no signup. See https://docs.dexpaprika.com for API
-documentation and https://agents.dexpaprika.com for the agent integration guide.
+Keyless DEX market data across every network DexPaprika covers: 36 chains,
+33M+ tokens, 36M+ pools. The free tier needs no API key and no signup. See
+https://docs.dexpaprika.com for API documentation and
+https://agents.dexpaprika.com for the agent integration guide.
 """
 
 from importlib import metadata
