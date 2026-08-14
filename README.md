@@ -20,9 +20,9 @@ pip install -U langchain-dexpaprika
 ```
 
 No credentials to configure. This package calls the keyless free tier and sends
-no API key, so there is no environment variable to set. The free tier is 200,000
-credits per month per IP at 30 requests per minute, with data delayed up to 15
-seconds; see https://dexpaprika.com/pricing for the paid tiers.
+no API key, so there is no environment variable to set. The free tier is keyless
+at 30 requests per minute, with data delayed up to 15 seconds; see
+https://dexpaprika.com/api/pricing for the current quotas and the paid tiers.
 
 ## Quickstart
 
