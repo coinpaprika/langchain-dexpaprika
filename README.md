@@ -91,6 +91,38 @@ candles = ohlcv.invoke(
 )
 ```
 
+## Using an API key (optional)
+
+**The toolkit works without a key and always will.** No signup, no card.
+
+A free key raises the monthly credit allowance. It does **not** raise the
+per-minute request limit, which is the same on both free tiers. Current figures
+are on the [rate limits page](https://docs.dexpaprika.com/knowledge-base/rate-limits).
+
+```python
+from langchain_dexpaprika import DexPaprikaToolkit
+from langchain_dexpaprika._client import DexPaprikaAPIWrapper
+
+toolkit = DexPaprikaToolkit(api_wrapper=DexPaprikaAPIWrapper(api_key="api_your_key"))
+
+# Or leave it out and set DEXPAPRIKA_API_KEY in the environment
+toolkit = DexPaprikaToolkit()
+```
+
+An explicit `api_key` beats the environment variable, and no key at all keeps the
+previous keyless behaviour unchanged.
+
+The key is excluded from `repr()` and `model_dump()`, because these wrappers end
+up inside agent traces and serialized chains, and a key in a trace is a
+credential in somebody's logs.
+
+**There is no `Bearer` prefix.** The key is sent as the entire `Authorization`
+value, which is what the API expects; a scheme word returns 401.
+
+**Pro customers** also set `base_url` to `https://api-pro.dexpaprika.com`. The
+host never changes on its own, because a free key sent to the Pro host returns
+403.
+
 ## Error handling
 
 We surface API errors as messages the agent can act on:
