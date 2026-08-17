@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "langchain-dexpaprika"
-version = "0.1.0"
+version = "0.2.0"
 description = "LangChain tools for the DexPaprika API: keyless DEX market data across 36 blockchains"
 readme = "README.md"
 license = "MIT"

@@ -10,8 +10,10 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 import threading
 import time
+from collections.abc import Mapping
 from importlib import metadata
 from typing import Any
 from urllib.parse import quote
@@ -22,6 +24,13 @@ from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, ValidationError
 
 DEFAULT_BASE_URL = "https://api.dexpaprika.com"
 DEFAULT_RETRY_AFTER_SECONDS = 20.0
+API_KEY_ENV_VAR = "DEXPAPRIKA_API_KEY"
+
+# Anything that would let a value break out of a header. A key carrying these is
+# dropped rather than sanitized: a mangled key authenticates as nobody, and
+# because the data endpoints ignore an unreadable key instead of rejecting it,
+# the caller would never find out.
+_HEADER_UNSAFE = ("\r", "\n", "\0")
 
 try:
     _VERSION = metadata.version("langchain-dexpaprika")
@@ -29,6 +38,24 @@ except metadata.PackageNotFoundError:  # pragma: no cover - only during developm
     _VERSION = "0.0.0"
 
 USER_AGENT = f"langchain-dexpaprika/{_VERSION}"
+
+
+def resolve_api_key(
+    explicit: str | None = None, env: Mapping[str, str] | None = None
+) -> str | None:
+    """Return a usable API key, or None for keyless.
+
+    Precedence is the explicit argument, then ``DEXPAPRIKA_API_KEY``, then
+    keyless. Keyless is the default and works without a key of any kind.
+    """
+    source = os.environ if env is None else env
+    raw = explicit if explicit is not None else source.get(API_KEY_ENV_VAR)
+    if not isinstance(raw, str):
+        return None
+    key = raw.strip()
+    if not key or any(char in key for char in _HEADER_UNSAFE):
+        return None
+    return key
 
 
 def truncate(text: str | None, limit: int) -> str | None:
@@ -150,10 +177,21 @@ class DexPaprikaAPIWrapper(BaseModel):
     """Shared sync and async HTTP wrapper for the DexPaprika REST API.
 
     One instance can back any number of tools; the toolkit shares a single
-    wrapper across all five. No API key is needed: this wrapper calls the
-    public keyless free tier.
+    wrapper across all five. No API key is needed: keyless is the default and
+    works without any signup.
 
     Attributes:
+        api_key: Optional. Falls back to the ``DEXPAPRIKA_API_KEY`` environment
+            variable. A free key raises the monthly credit allowance; it does not
+            raise the per-minute limit, which is the same on both free tiers.
+
+            The key is sent as the entire ``Authorization`` value, with no
+            ``Bearer`` prefix and no other scheme word, because the API
+            checksums the raw header and a scheme word returns 401.
+
+            The host does not change when a key is present: free keys are served
+            from ``base_url`` and only Pro moves to ``api-pro.dexpaprika.com``,
+            which callers set through ``base_url``.
         base_url: API origin. Override it to point tools at a mock server in
             tests or at a different deployment.
         timeout: Per-request timeout in seconds.
@@ -165,6 +203,7 @@ class DexPaprikaAPIWrapper(BaseModel):
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
+    api_key: str | None = Field(default=None, exclude=True, repr=False)
     base_url: str = DEFAULT_BASE_URL
     timeout: float = 15.0
     max_retries: int = 2
@@ -174,7 +213,12 @@ class DexPaprikaAPIWrapper(BaseModel):
     _client_lock: threading.Lock = PrivateAttr(default_factory=threading.Lock)
 
     def _headers(self) -> dict[str, str]:
-        return {"User-Agent": USER_AGENT, "Accept": "application/json"}
+        headers = {"User-Agent": USER_AGENT, "Accept": "application/json"}
+        key = resolve_api_key(self.api_key)
+        if key is not None:
+            # The whole value, with no scheme word in front of it.
+            headers["Authorization"] = key
+        return headers
 
     def _get_sync_client(self) -> httpx.Client:
         # Double-checked locking: the toolkit shares one wrapper across all five
