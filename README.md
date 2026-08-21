@@ -118,7 +118,7 @@ up inside agent traces and serialized chains, and a key in a trace is a
 credential in somebody's logs.
 
 **There is no `Bearer` prefix.** The key is sent as the entire `Authorization`
-value, which is what the API expects; a scheme word returns 401.
+value, which is what the API expects; `ApiKey` or `Token` in front of it returns 401.
 
 **Pro customers** also set `base_url` to `https://api-pro.dexpaprika.com`. The
 host never changes on its own, because a free key sent to the Pro host returns
