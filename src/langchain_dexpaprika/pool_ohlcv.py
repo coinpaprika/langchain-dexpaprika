@@ -29,14 +29,22 @@ class DexPaprikaPoolOHLCVInput(BaseModel):
         description="Pool contract address, e.g. from dexpaprika_token_pools."
     )
     start: str | int = Field(
-        description="REQUIRED start of the window: 'YYYY-MM-DD', RFC3339, or Unix seconds."
+        description=(
+            "REQUIRED start of the window. Simplest is an offset back from now, which needs "
+            "no knowledge of today's date: '-24h' (last 24 hours), '-7d', '-90m' (units s, "
+            "m, h, d). Also 'YYYY-MM-DD', RFC3339, or Unix seconds. Without an API key only "
+            "the last 24 hours are available."
+        )
     )
     end: str | int | None = Field(
         default=None,
-        description="Optional end of the window, same formats as start.",
+        description="Optional end of the window, same formats as start (e.g. '-1h').",
     )
-    interval: Interval = Field(default="24h", description="Candle interval.")
-    limit: int = Field(default=30, ge=1, le=366, description="Number of candles, 1-366.")
+    interval: Interval = Field(
+        default="24h",
+        description="Candle interval. Without an API key only 1h, 6h, 12h and 24h.",
+    )
+    limit: int = Field(default=30, ge=1, le=1000, description="Number of candles, 1-1000.")
     inversed: bool = Field(
         default=False,
         description=(
@@ -58,9 +66,9 @@ class DexPaprikaPoolOHLCV(BaseTool):
                 {
                     "network": "ethereum",
                     "pool_address": "0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640",
-                    "start": "2026-07-10",
-                    "interval": "24h",
-                    "limit": 3,
+                    "start": "-24h",
+                    "interval": "1h",
+                    "limit": 24,
                 }
             )
     """
@@ -68,9 +76,13 @@ class DexPaprikaPoolOHLCV(BaseTool):
     name: str = "dexpaprika_pool_ohlcv"
     description: str = (
         "Get historical OHLCV price candles (open, high, low, close, volume in USD) for "
-        "one liquidity pool. Candle interval from 1 minute to 24 hours, up to 366 "
+        "one liquidity pool. Candle interval from 1 minute to 24 hours, up to 1000 "
         "candles per call. Use for price history, trend and volatility analysis, and "
-        "charting. The price is for the pool's token pair, not a global token average."
+        "charting. The price is for the pool's token pair, not a global token average. "
+        "History depends on the plan: without an API key the last 24 hours at 1h and "
+        "longer, so start='-24h' always works; a free key opens 7 days at 10m and "
+        "longer. A request outside the plan fails with a message naming the plan "
+        "that allows it."
     )
     args_schema: type[BaseModel] = DexPaprikaPoolOHLCVInput
     handle_tool_error: bool = True
