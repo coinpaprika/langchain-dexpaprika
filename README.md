@@ -44,7 +44,7 @@ price, liquidity), pools, and DEXes.
 | `dexpaprika_search` | `DexPaprikaSearch` | Tokens, pools, and DEXes matching a name, symbol, or address. The entry point when you only have a ticker. |
 | `dexpaprika_token_details` | `DexPaprikaTokenDetails` | Price, FDV, liquidity, pool count, and 24h/6h/1h volume with buy/sell breakdown for one token on one network. |
 | `dexpaprika_token_pools` | `DexPaprikaTokenPools` | Pools where a token trades, sortable by volume, liquidity, transactions, age, price, or 24h price change. |
-| `dexpaprika_pool_ohlcv` | `DexPaprikaPoolOHLCV` | Historical OHLCV candles for one pool, intervals from 1m to 24h, up to 366 candles per call. |
+| `dexpaprika_pool_ohlcv` | `DexPaprikaPoolOHLCV` | Historical OHLCV candles for one pool, intervals from 1m to 24h, up to 1000 candles per call. History depth depends on your plan. |
 | `dexpaprika_networks` | `DexPaprikaNetworks` | Every supported network with its exact id, 24h volume, transactions, and pool counts. |
 
 ## Use the toolkit in an agent
@@ -85,20 +85,28 @@ candles = ohlcv.invoke(
     {
         "network": "ethereum",
         "pool_address": "0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640",
-        "start": "2026-07-10",
-        "interval": "24h",
-        "limit": 7,
+        "start": "-24h",  # the last 24 hours, which works without a key
+        "interval": "1h",
+        "limit": 24,
     }
 )
 ```
 
+`start` and `end` take an offset back from now (`-24h`, `-7d`, `-90m`) as well
+as `YYYY-MM-DD`, RFC3339 and Unix seconds. How far back you can go and how fine
+the candles can be depends on your plan: without a key, the last 24 hours at
+`1h` and longer; a free key opens 7 days at `10m` and longer; Dev 30 days at
+every interval; Pro unlimited. A request outside your plan fails with the API's
+message, which names the plan that allows it. Full table: [OHLCV limits by
+plan](https://docs.dexpaprika.com/knowledge-base/rate-limits#ohlcv-limits-by-plan).
+
 ## Using an API key (optional)
 
-**The toolkit works without a key and always will.** No signup, no card.
+**The toolkit works without a key.** No signup, no card.
 
-A free key raises the monthly credit allowance. It does **not** raise the
-per-minute request limit, which is the same on both free tiers. Current figures
-are on the [rate limits page](https://docs.dexpaprika.com/knowledge-base/rate-limits).
+A [free key](https://console.dexpaprika.com) raises the monthly credit allowance
+and the per-minute request limit, and opens 7 days of OHLCV history. Current
+figures are on the [rate limits page](https://docs.dexpaprika.com/knowledge-base/rate-limits).
 
 ```python
 from langchain_dexpaprika import DexPaprikaToolkit

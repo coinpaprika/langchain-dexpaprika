@@ -167,9 +167,14 @@ def _process_response(response: httpx.Response, path: str, *, not_found: str | N
     if status == 429:
         raise ToolException(
             "DexPaprika API rate limit hit (HTTP 429) and retries were exhausted. The "
-            "keyless tier allows short bursts of roughly 30 requests per 20 seconds; "
-            "wait about 20 seconds before the next call."
+            "limit is per minute, so wait about a minute before the next call. A free "
+            "API key from https://console.dexpaprika.com raises it."
         )
+    # Other refusals carry a message worth passing on. A 403 on OHLCV, for
+    # example, names the plan that opens the requested history or interval.
+    message = body.get("message")
+    if message:
+        raise ToolException(f"DexPaprika API returned HTTP {status} for {path}: {message}")
     raise ToolException(f"DexPaprika API returned HTTP {status} for {path}.")
 
 

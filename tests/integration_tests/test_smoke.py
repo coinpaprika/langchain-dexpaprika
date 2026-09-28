@@ -15,8 +15,8 @@ def test_pool_ohlcv_inversed_flips_pair_perspective() -> None:
     base_args = {
         "network": "ethereum",
         "pool_address": USDC_WETH_POOL,
-        "start": "2026-07-10",
-        "interval": "24h",
+        "start": "-24h",
+        "interval": "1h",
         "limit": 2,
     }
     base = json.loads(tool.invoke(dict(base_args)))

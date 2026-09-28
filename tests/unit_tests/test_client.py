@@ -229,6 +229,67 @@ def test_pool_ohlcv_builds_params_and_omits_defaults() -> None:
     assert second["end"] == "2026-07-12"
 
 
+OHLCV_HISTORY_403 = (
+    "OHLCV history beyond the last 24 hours requires an API key "
+    "(free key: 7 days, Dev plan: 30 days, Pro plan: unlimited)"
+)
+
+
+def test_403_message_reaches_the_agent() -> None:
+    # The OHLCV plan limits answer 403 with a message naming the plan that lifts
+    # them. Without it the agent only learns "HTTP 403" and cannot recover.
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(403, json={"message": OHLCV_HISTORY_403})
+
+    tool = DexPaprikaPoolOHLCV(api_wrapper=make_wrapper(handler))
+    result = tool.invoke({"network": "ethereum", "pool_address": "0xpool", "start": "-7d"})
+    assert OHLCV_HISTORY_403 in result
+    assert "HTTP 403" in result
+
+
+def test_error_without_message_keeps_the_generic_text() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(403, content=b"")
+
+    wrapper = make_wrapper(handler)
+    with pytest.raises(ToolException) as exc_info:
+        wrapper.get("/networks", {})
+    assert str(exc_info.value) == "DexPaprika API returned HTTP 403 for /networks."
+
+
+def test_pool_ohlcv_passes_a_relative_start_through() -> None:
+    seen: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(request)
+        return httpx.Response(200, json=[])
+
+    tool = DexPaprikaPoolOHLCV(api_wrapper=make_wrapper(handler))
+    tool.invoke(
+        {
+            "network": "ethereum",
+            "pool_address": "0xpool",
+            "start": "-24h",
+            "end": "-1h",
+            "interval": "1h",
+            "limit": 1000,
+        }
+    )
+    params = dict(httpx.QueryParams(seen[0].url.query))
+    assert params == {"start": "-24h", "end": "-1h", "interval": "1h", "limit": "1000"}
+
+
+def test_pool_ohlcv_rejects_a_limit_above_1000() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        raise AssertionError("a limit above 1000 must not reach the API")
+
+    tool = DexPaprikaPoolOHLCV(api_wrapper=make_wrapper(handler))
+    result = tool.invoke(
+        {"network": "ethereum", "pool_address": "0xpool", "start": "-24h", "limit": 1001}
+    )
+    assert "limit" in result
+
+
 def test_networks_sends_user_agent_and_returns_compact_json() -> None:
     seen: list[httpx.Request] = []
 
