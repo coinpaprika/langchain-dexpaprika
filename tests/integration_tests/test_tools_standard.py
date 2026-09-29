@@ -1,8 +1,13 @@
 """langchain-tests standard integration suites, one per tool.
 
 These hit the live keyless API. Roughly 4 requests per suite (sync and async,
-with and without a ToolCall), about 20 per full run. Run them serially; the
+with and without a ToolCall), about 24 per full run. Run them serially; the
 API's burst limiter allows roughly 30 requests per 20 seconds.
+
+The token OHLCV suite runs keyless too. Every call there gets a 403, since
+that endpoint needs a Dev or Pro plan; the suite still passes because
+``handle_tool_error=True`` turns the 403 into a tool message instead of a
+raised exception, which is exactly what these tests check for.
 """
 
 from typing import Any
@@ -14,6 +19,7 @@ from langchain_dexpaprika import (
     DexPaprikaPoolOHLCV,
     DexPaprikaSearch,
     DexPaprikaTokenDetails,
+    DexPaprikaTokenOHLCV,
     DexPaprikaTokenPools,
 )
 
@@ -77,6 +83,26 @@ class TestDexPaprikaPoolOHLCVIntegration(ToolsIntegrationTests):
         return {
             "network": "ethereum",
             "pool_address": USDC_WETH_POOL,
+            "start": "-24h",
+            "interval": "1h",
+            "limit": 3,
+        }
+
+
+class TestDexPaprikaTokenOHLCVIntegration(ToolsIntegrationTests):
+    @property
+    def tool_constructor(self) -> type[DexPaprikaTokenOHLCV]:
+        return DexPaprikaTokenOHLCV
+
+    @property
+    def tool_constructor_params(self) -> dict[str, Any]:
+        return {}
+
+    @property
+    def tool_invoke_params_example(self) -> dict[str, Any]:
+        return {
+            "network": "ethereum",
+            "token_address": WETH,
             "start": "-24h",
             "interval": "1h",
             "limit": 3,

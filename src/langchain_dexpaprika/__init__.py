@@ -13,6 +13,7 @@ from langchain_dexpaprika.networks import DexPaprikaNetworks
 from langchain_dexpaprika.pool_ohlcv import DexPaprikaPoolOHLCV
 from langchain_dexpaprika.search import DexPaprikaSearch
 from langchain_dexpaprika.token_details import DexPaprikaTokenDetails
+from langchain_dexpaprika.token_ohlcv import DexPaprikaTokenOHLCV
 from langchain_dexpaprika.token_pools import DexPaprikaTokenPools
 from langchain_dexpaprika.toolkit import DexPaprikaToolkit
 
@@ -27,6 +28,7 @@ __all__ = [
     "DexPaprikaPoolOHLCV",
     "DexPaprikaSearch",
     "DexPaprikaTokenDetails",
+    "DexPaprikaTokenOHLCV",
     "DexPaprikaTokenPools",
     "DexPaprikaToolkit",
     "__version__",

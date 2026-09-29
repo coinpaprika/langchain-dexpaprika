@@ -45,11 +45,12 @@ price, liquidity), pools, and DEXes.
 | `dexpaprika_token_details` | `DexPaprikaTokenDetails` | Price, FDV, liquidity, pool count, and 24h/6h/1h volume with buy/sell breakdown for one token on one network. |
 | `dexpaprika_token_pools` | `DexPaprikaTokenPools` | Pools where a token trades, sortable by volume, liquidity, transactions, age, price, or 24h price change. |
 | `dexpaprika_pool_ohlcv` | `DexPaprikaPoolOHLCV` | Historical OHLCV candles for one pool, intervals from 1m to 24h, up to 1000 candles per call. History depth depends on your plan. |
+| `dexpaprika_token_ohlcv` | `DexPaprikaTokenOHLCV` | Historical USD OHLCV candles for one token, volume-weighted across every pool it trades in on that network. Needs a Dev or Pro plan; see [get OHLCV data for a token](https://docs.dexpaprika.com/api-reference/tokens/get-ohlcv-data-for-a-token). |
 | `dexpaprika_networks` | `DexPaprikaNetworks` | Every supported network with its exact id, 24h volume, transactions, and pool counts. |
 
 ## Use the toolkit in an agent
 
-`DexPaprikaToolkit` bundles all five tools over one shared HTTP client. The
+`DexPaprikaToolkit` bundles all six tools over one shared HTTP client. The
 example below drives them with an Anthropic model, so install the provider and
 set its key first (swap in any chat model you prefer):
 
@@ -96,9 +97,42 @@ candles = ohlcv.invoke(
 as `YYYY-MM-DD`, RFC3339 and Unix seconds. How far back you can go and how fine
 the candles can be depends on your plan: without a key, the last 24 hours at
 `1h` and longer; a free key opens 7 days at `10m` and longer; Dev 30 days at
-every interval; Pro unlimited. A request outside your plan fails with the API's
+every interval; Pro with no plan limit on history. A request outside your plan fails with the API's
 message, which names the plan that allows it. Full table: [OHLCV limits by
 plan](https://docs.dexpaprika.com/knowledge-base/rate-limits#ohlcv-limits-by-plan).
+
+### Token OHLCV (Dev and Pro plans)
+
+`dexpaprika_token_ohlcv` returns the same candle shape, but for a token instead
+of a single pool: open, high, low, close and volume, all in USD, computed from
+a volume-weighted price across every pool the token trades in on that network,
+with volume summed in USD across those same pools. Use it when you want one
+token's overall price history rather than the price in one specific pool.
+
+```python
+from langchain_dexpaprika import DexPaprikaTokenOHLCV
+
+token_ohlcv = DexPaprikaTokenOHLCV()
+candles = token_ohlcv.invoke(
+    {
+        "network": "ethereum",
+        "token_address": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+        "start": "-24h",
+        "interval": "1h",
+        "limit": 24,
+    }
+)
+```
+
+This endpoint needs a Dev or Pro plan. A keyless or free-key call fails with a
+403 and a message naming the required plan; on that 403, call
+`dexpaprika_token_pools` to find the token's most liquid pool and fetch candles
+from `dexpaprika_pool_ohlcv` on that pool instead. Pool candles are priced in the
+pool's other token, not in USD, so pick a stablecoin pair where you can. See [get OHLCV data for a
+token](https://docs.dexpaprika.com/api-reference/tokens/get-ohlcv-data-for-a-token)
+and the [pricing page](https://dexpaprika.com/api/pricing) for which plan you
+need. Dev and Pro keys call `https://api-pro.dexpaprika.com`; see "Using an API
+key" below for how to point a wrapper at it.
 
 ## Using an API key (optional)
 
@@ -125,10 +159,9 @@ The key is excluded from `repr()` and `model_dump()`, because these wrappers end
 up inside agent traces and serialized chains, and a key in a trace is a
 credential in somebody's logs.
 
-**There is no `Bearer` prefix.** The key is sent as the entire `Authorization`
-value, which is what the API expects; `ApiKey` or `Token` in front of it returns 401.
+The key is sent as the entire `Authorization` value, with nothing in front of it.
 
-**Pro customers** also set `base_url` to `https://api-pro.dexpaprika.com`. The
+**Dev and Pro customers** also set `base_url` to `https://api-pro.dexpaprika.com`. The
 host never changes on its own, because a free key sent to the Pro host returns
 403.
 

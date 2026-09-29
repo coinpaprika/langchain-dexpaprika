@@ -18,6 +18,7 @@ from langchain_dexpaprika import (
     DexPaprikaPoolOHLCV,
     DexPaprikaSearch,
     DexPaprikaTokenDetails,
+    DexPaprikaTokenOHLCV,
     DexPaprikaTokenPools,
     DexPaprikaToolkit,
 )
@@ -290,6 +291,68 @@ def test_pool_ohlcv_rejects_a_limit_above_1000() -> None:
     assert "limit" in result
 
 
+def test_token_ohlcv_builds_params_and_omits_defaults() -> None:
+    seen: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(request)
+        return httpx.Response(200, json=[])
+
+    tool = DexPaprikaTokenOHLCV(api_wrapper=make_wrapper(handler))
+    tool.invoke(
+        {
+            "network": "ethereum",
+            "token_address": WETH,
+            "start": "2026-07-10",
+            "limit": 3,
+        }
+    )
+    params = dict(httpx.QueryParams(seen[0].url.query))
+    assert params == {"start": "2026-07-10", "interval": "24h", "limit": "3"}
+    assert "inversed" not in params
+
+
+def test_token_ohlcv_hits_the_token_path_not_the_pool_path() -> None:
+    seen: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(request)
+        return httpx.Response(200, json=[])
+
+    tool = DexPaprikaTokenOHLCV(api_wrapper=make_wrapper(handler))
+    tool.invoke({"network": "ethereum", "token_address": WETH, "start": "-24h", "end": "-1h"})
+    assert seen[0].url.path == f"/networks/ethereum/tokens/{WETH}/ohlcv"
+    params = dict(httpx.QueryParams(seen[0].url.query))
+    assert params["end"] == "-1h"
+
+
+TOKEN_OHLCV_403 = "this endpoint requires a Dev or Pro plan"
+
+
+def test_token_ohlcv_403_message_reaches_the_agent() -> None:
+    # Keyless and free-key calls to token OHLCV fail with a 403 naming the plan
+    # required; the agent needs that message verbatim so it can fall back to
+    # dexpaprika_pool_ohlcv instead of retrying blindly.
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(403, json={"message": TOKEN_OHLCV_403})
+
+    tool = DexPaprikaTokenOHLCV(api_wrapper=make_wrapper(handler))
+    result = tool.invoke({"network": "ethereum", "token_address": WETH, "start": "-24h"})
+    assert TOKEN_OHLCV_403 in result
+    assert "HTTP 403" in result
+
+
+def test_token_ohlcv_rejects_a_limit_above_1000() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        raise AssertionError("a limit above 1000 must not reach the API")
+
+    tool = DexPaprikaTokenOHLCV(api_wrapper=make_wrapper(handler))
+    result = tool.invoke(
+        {"network": "ethereum", "token_address": WETH, "start": "-24h", "limit": 1001}
+    )
+    assert "limit" in result
+
+
 def test_networks_sends_user_agent_and_returns_compact_json() -> None:
     seen: list[httpx.Request] = []
 
@@ -303,7 +366,7 @@ def test_networks_sends_user_agent_and_returns_compact_json() -> None:
     assert seen[0].headers["User-Agent"].startswith("langchain-dexpaprika/")
 
 
-def test_toolkit_returns_five_tools_sharing_one_wrapper() -> None:
+def test_toolkit_returns_six_tools_sharing_one_wrapper() -> None:
     toolkit = DexPaprikaToolkit()
     tools = toolkit.get_tools()
     assert [tool.name for tool in tools] == [
@@ -311,6 +374,7 @@ def test_toolkit_returns_five_tools_sharing_one_wrapper() -> None:
         "dexpaprika_token_details",
         "dexpaprika_token_pools",
         "dexpaprika_pool_ohlcv",
+        "dexpaprika_token_ohlcv",
         "dexpaprika_networks",
     ]
     wrappers = {id(tool.api_wrapper) for tool in tools}  # type: ignore[attr-defined]

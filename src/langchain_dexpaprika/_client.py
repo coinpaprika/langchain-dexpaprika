@@ -182,21 +182,20 @@ class DexPaprikaAPIWrapper(BaseModel):
     """Shared sync and async HTTP wrapper for the DexPaprika REST API.
 
     One instance can back any number of tools; the toolkit shares a single
-    wrapper across all five. No API key is needed: keyless is the default and
+    wrapper across all six. No API key is needed: keyless is the default and
     works without any signup.
 
     Attributes:
         api_key: Optional. Falls back to the ``DEXPAPRIKA_API_KEY`` environment
-            variable. A free key raises the monthly credit allowance; it does not
-            raise the per-minute limit, which is the same on both free tiers.
+            variable. A free key raises the per-minute rate and the credit
+            allowance; current numbers are on https://dexpaprika.com/api/pricing.
 
-            The key is sent as the entire ``Authorization`` value, with no
-            ``Bearer`` prefix and no other scheme word, because the API
-            checksums the raw header and a scheme word returns 401.
+            The key is sent as the entire ``Authorization`` value, with nothing
+            in front of it.
 
             The host does not change when a key is present: free keys are served
-            from ``base_url`` and only Pro moves to ``api-pro.dexpaprika.com``,
-            which callers set through ``base_url``.
+            from ``base_url``, while Dev and Pro keys call
+            ``api-pro.dexpaprika.com``, which callers set through ``base_url``.
         base_url: API origin. Override it to point tools at a mock server in
             tests or at a different deployment.
         timeout: Per-request timeout in seconds.
@@ -226,7 +225,7 @@ class DexPaprikaAPIWrapper(BaseModel):
         return headers
 
     def _get_sync_client(self) -> httpx.Client:
-        # Double-checked locking: the toolkit shares one wrapper across all five
+        # Double-checked locking: the toolkit shares one wrapper across all six
         # tools, so parallel first calls in threads would otherwise each build a
         # client and orphan all but one unclosed. The lock makes the lazy init
         # single-flight without paying for it on the common already-built path.

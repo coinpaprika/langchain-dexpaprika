@@ -13,6 +13,7 @@ from langchain_dexpaprika import (
     DexPaprikaPoolOHLCV,
     DexPaprikaSearch,
     DexPaprikaTokenDetails,
+    DexPaprikaTokenOHLCV,
     DexPaprikaTokenPools,
 )
 
@@ -76,6 +77,26 @@ class TestDexPaprikaPoolOHLCVUnit(ToolsUnitTests):
         return {
             "network": "ethereum",
             "pool_address": USDC_WETH_POOL,
+            "start": "2026-07-10",
+            "interval": "24h",
+            "limit": 3,
+        }
+
+
+class TestDexPaprikaTokenOHLCVUnit(ToolsUnitTests):
+    @property
+    def tool_constructor(self) -> type[DexPaprikaTokenOHLCV]:
+        return DexPaprikaTokenOHLCV
+
+    @property
+    def tool_constructor_params(self) -> dict[str, Any]:
+        return {}
+
+    @property
+    def tool_invoke_params_example(self) -> dict[str, Any]:
+        return {
+            "network": "ethereum",
+            "token_address": WETH,
             "start": "2026-07-10",
             "interval": "24h",
             "limit": 3,
