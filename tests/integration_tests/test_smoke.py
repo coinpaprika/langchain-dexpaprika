@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 
-from langchain_dexpaprika import DexPaprikaPoolOHLCV, DexPaprikaTokenPools
+from langchain_dexpaprika import DexPaprikaPoolOHLCV, DexPaprikaTokenOHLCV, DexPaprikaTokenPools
 
 WETH = "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
 USDC_WETH_POOL = "0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640"
@@ -25,6 +25,23 @@ def test_pool_ohlcv_inversed_flips_pair_perspective() -> None:
     expected_keys = {"time_open", "time_close", "open", "high", "low", "close", "volume"}
     assert expected_keys <= set(base[0])
     assert base[0]["close"] != flipped[0]["close"]
+
+
+def test_token_ohlcv_keyless_403_names_the_required_plan() -> None:
+    # Live check that the plan gate is real and the message an agent gets is
+    # still what our tool description promises to fall back on.
+    tool = DexPaprikaTokenOHLCV()
+    result = tool.invoke(
+        {
+            "network": "ethereum",
+            "token_address": WETH,
+            "start": "-24h",
+            "interval": "1h",
+            "limit": 3,
+        }
+    )
+    assert "Dev or Pro plan" in result
+    assert "403" in result
 
 
 def test_token_pools_order_by_liquidity_desc() -> None:
