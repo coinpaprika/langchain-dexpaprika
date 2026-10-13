@@ -45,12 +45,14 @@ price, liquidity), pools, and DEXes.
 | `dexpaprika_token_details` | `DexPaprikaTokenDetails` | Price, FDV, liquidity, pool count, and 24h/6h/1h volume with buy/sell breakdown for one token on one network. |
 | `dexpaprika_token_pools` | `DexPaprikaTokenPools` | Pools where a token trades, sortable by volume, liquidity, transactions, age, price, or 24h price change. |
 | `dexpaprika_pool_ohlcv` | `DexPaprikaPoolOHLCV` | Historical OHLCV candles for one pool, intervals from 1m to 24h, up to 1000 candles per call. History depth depends on your plan. |
+| `dexpaprika_pool_indicator` | `DexPaprikaPoolIndicator` | A technical indicator (rsi, ema, macd, bbands, or vwap) computed from one pool's OHLCV history. Works without an API key. |
 | `dexpaprika_token_ohlcv` | `DexPaprikaTokenOHLCV` | Historical USD OHLCV candles for one token, volume-weighted across every pool it trades in on that network. Needs a Dev or Pro plan; see [get OHLCV data for a token](https://docs.dexpaprika.com/api-reference/tokens/get-ohlcv-data-for-a-token). |
+| `dexpaprika_token_indicator` | `DexPaprikaTokenIndicator` | A technical indicator (rsi, ema, macd, bbands, or vwap) computed from one token's volume-weighted OHLCV history across every pool it trades in. Needs a Dev or Pro plan; see [get a technical indicator for a token](https://docs.dexpaprika.com/api-reference/tokens/get-a-technical-indicator-for-a-token). |
 | `dexpaprika_networks` | `DexPaprikaNetworks` | Every supported network with its exact id, 24h volume, transactions, and pool counts. |
 
 ## Use the toolkit in an agent
 
-`DexPaprikaToolkit` bundles all six tools over one shared HTTP client. The
+`DexPaprikaToolkit` bundles all eight tools over one shared HTTP client. The
 example below drives them with an Anthropic model, so install the provider and
 set its key first (swap in any chat model you prefer):
 
@@ -133,6 +135,46 @@ token](https://docs.dexpaprika.com/api-reference/tokens/get-ohlcv-data-for-a-tok
 and the [pricing page](https://dexpaprika.com/api/pricing) for which plan you
 need. Dev and Pro keys call `https://api-pro.dexpaprika.com`; see "Using an API
 key" below for how to point a wrapper at it.
+
+### Technical indicators
+
+`dexpaprika_pool_indicator` and `dexpaprika_token_indicator` compute one
+technical indicator at a time over a pool's or a token's OHLCV history:
+`rsi`, `ema`, `macd`, `bbands` (Bollinger Bands), or `vwap`. The pool version
+works without an API key; the token version needs a Dev or Pro plan, the same
+as `dexpaprika_token_ohlcv`.
+
+```python
+from langchain_dexpaprika import DexPaprikaPoolIndicator
+
+indicator = DexPaprikaPoolIndicator()
+rsi = indicator.invoke(
+    {
+        "network": "ethereum",
+        "pool_address": "0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640",
+        "indicator": "rsi",
+        "interval": "1h",  # always pass interval explicitly
+        "start": "-6h",
+    }
+)
+```
+
+`rsi` and `ema` and `vwap` responses carry one `value` per candle; `macd`
+carries `macd`, `signal`, and `histogram`; `bbands` carries `upper`, `middle`,
+and `lower`. Only send the parameter that matches your indicator (`period`
+for rsi, ema, bbands, and vwap; `fast_period`/`slow_period`/`signal_period`
+for macd; `std_dev` for bbands); sending one that belongs to a different
+indicator is rejected with a 400 naming it.
+
+For a token instead of one pool, use `dexpaprika_token_indicator`, which needs
+a Dev or Pro plan and falls back the same way `dexpaprika_token_ohlcv` does: on
+a 403, call `dexpaprika_token_pools` to find the most liquid pool and use
+`dexpaprika_pool_indicator` on that pool instead. See [technical indicators
+tutorial](https://docs.dexpaprika.com/tutorials/technical-indicators), [get a
+technical indicator for a
+pool](https://docs.dexpaprika.com/api-reference/pools/get-a-technical-indicator-for-a-pool),
+and [get a technical indicator for a
+token](https://docs.dexpaprika.com/api-reference/tokens/get-a-technical-indicator-for-a-token).
 
 ## Using an API key (optional)
 

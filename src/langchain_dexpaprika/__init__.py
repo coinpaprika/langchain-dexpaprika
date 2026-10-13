@@ -10,9 +10,11 @@ from importlib import metadata
 
 from langchain_dexpaprika._client import DexPaprikaAPIWrapper
 from langchain_dexpaprika.networks import DexPaprikaNetworks
+from langchain_dexpaprika.pool_indicator import DexPaprikaPoolIndicator
 from langchain_dexpaprika.pool_ohlcv import DexPaprikaPoolOHLCV
 from langchain_dexpaprika.search import DexPaprikaSearch
 from langchain_dexpaprika.token_details import DexPaprikaTokenDetails
+from langchain_dexpaprika.token_indicator import DexPaprikaTokenIndicator
 from langchain_dexpaprika.token_ohlcv import DexPaprikaTokenOHLCV
 from langchain_dexpaprika.token_pools import DexPaprikaTokenPools
 from langchain_dexpaprika.toolkit import DexPaprikaToolkit
@@ -25,9 +27,11 @@ except metadata.PackageNotFoundError:  # pragma: no cover - only during developm
 __all__ = [
     "DexPaprikaAPIWrapper",
     "DexPaprikaNetworks",
+    "DexPaprikaPoolIndicator",
     "DexPaprikaPoolOHLCV",
     "DexPaprikaSearch",
     "DexPaprikaTokenDetails",
+    "DexPaprikaTokenIndicator",
     "DexPaprikaTokenOHLCV",
     "DexPaprikaTokenPools",
     "DexPaprikaToolkit",

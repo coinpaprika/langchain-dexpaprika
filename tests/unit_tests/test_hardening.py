@@ -18,9 +18,11 @@ import pytest
 from pytest_socket import SocketBlockedError
 
 from langchain_dexpaprika import (
+    DexPaprikaPoolIndicator,
     DexPaprikaPoolOHLCV,
     DexPaprikaSearch,
     DexPaprikaTokenDetails,
+    DexPaprikaTokenIndicator,
     DexPaprikaTokenPools,
 )
 from langchain_dexpaprika._client import DexPaprikaAPIWrapper, compact_json
@@ -96,6 +98,18 @@ def test_dot_segment_pool_address_rejected() -> None:
     tool = DexPaprikaPoolOHLCV(api_wrapper=wrapper_returning([]))
     out = tool.invoke({"network": "ethereum", "pool_address": "..", "start": "2026-07-10"})
     assert "Invalid pool_address" in out
+
+
+def test_dot_segment_pool_indicator_rejected() -> None:
+    tool = DexPaprikaPoolIndicator(api_wrapper=wrapper_returning({"data": []}))
+    out = tool.invoke({"network": "ethereum", "pool_address": "..", "indicator": "rsi"})
+    assert "Invalid pool_address" in out
+
+
+def test_dot_segment_token_indicator_rejected() -> None:
+    tool = DexPaprikaTokenIndicator(api_wrapper=wrapper_returning({"data": []}))
+    out = tool.invoke({"network": "..", "token_address": WETH, "indicator": "rsi"})
+    assert "Invalid network" in out
 
 
 # --- search truncation signal and limit (finding #1) ---
