@@ -1,4 +1,4 @@
-"""DexPaprikaToolkit: all six DexPaprika tools behind one constructor."""
+"""DexPaprikaToolkit: all eight DexPaprika tools behind one constructor."""
 
 from __future__ import annotations
 
@@ -7,15 +7,17 @@ from pydantic import Field
 
 from langchain_dexpaprika._client import DexPaprikaAPIWrapper
 from langchain_dexpaprika.networks import DexPaprikaNetworks
+from langchain_dexpaprika.pool_indicator import DexPaprikaPoolIndicator
 from langchain_dexpaprika.pool_ohlcv import DexPaprikaPoolOHLCV
 from langchain_dexpaprika.search import DexPaprikaSearch
 from langchain_dexpaprika.token_details import DexPaprikaTokenDetails
+from langchain_dexpaprika.token_indicator import DexPaprikaTokenIndicator
 from langchain_dexpaprika.token_ohlcv import DexPaprikaTokenOHLCV
 from langchain_dexpaprika.token_pools import DexPaprikaTokenPools
 
 
 class DexPaprikaToolkit(BaseToolkit):
-    """Toolkit bundling the six DexPaprika tools over one shared HTTP client.
+    """Toolkit bundling the eight DexPaprika tools over one shared HTTP client.
 
     Example:
         .. code-block:: python
@@ -35,6 +37,8 @@ class DexPaprikaToolkit(BaseToolkit):
             DexPaprikaTokenDetails(api_wrapper=self.api_wrapper),
             DexPaprikaTokenPools(api_wrapper=self.api_wrapper),
             DexPaprikaPoolOHLCV(api_wrapper=self.api_wrapper),
+            DexPaprikaPoolIndicator(api_wrapper=self.api_wrapper),
             DexPaprikaTokenOHLCV(api_wrapper=self.api_wrapper),
+            DexPaprikaTokenIndicator(api_wrapper=self.api_wrapper),
             DexPaprikaNetworks(api_wrapper=self.api_wrapper),
         ]

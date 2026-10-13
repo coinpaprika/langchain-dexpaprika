@@ -16,9 +16,11 @@ from langchain_tests.integration_tests import ToolsIntegrationTests
 
 from langchain_dexpaprika import (
     DexPaprikaNetworks,
+    DexPaprikaPoolIndicator,
     DexPaprikaPoolOHLCV,
     DexPaprikaSearch,
     DexPaprikaTokenDetails,
+    DexPaprikaTokenIndicator,
     DexPaprikaTokenOHLCV,
     DexPaprikaTokenPools,
 )
@@ -105,6 +107,52 @@ class TestDexPaprikaTokenOHLCVIntegration(ToolsIntegrationTests):
             "token_address": WETH,
             "start": "-24h",
             "interval": "1h",
+            "limit": 3,
+        }
+
+
+class TestDexPaprikaPoolIndicatorIntegration(ToolsIntegrationTests):
+    @property
+    def tool_constructor(self) -> type[DexPaprikaPoolIndicator]:
+        return DexPaprikaPoolIndicator
+
+    @property
+    def tool_constructor_params(self) -> dict[str, Any]:
+        return {}
+
+    @property
+    def tool_invoke_params_example(self) -> dict[str, Any]:
+        return {
+            "network": "ethereum",
+            "pool_address": USDC_WETH_POOL,
+            "indicator": "rsi",
+            "interval": "1h",
+            "start": "-6h",
+            "limit": 3,
+        }
+
+
+class TestDexPaprikaTokenIndicatorIntegration(ToolsIntegrationTests):
+    # This suite runs keyless too. Every call there gets a 403, since the
+    # endpoint needs a Dev, Pro, or Enterprise plan; the suite still passes
+    # because ``handle_tool_error=True`` turns the 403 into a tool message
+    # instead of a raised exception.
+    @property
+    def tool_constructor(self) -> type[DexPaprikaTokenIndicator]:
+        return DexPaprikaTokenIndicator
+
+    @property
+    def tool_constructor_params(self) -> dict[str, Any]:
+        return {}
+
+    @property
+    def tool_invoke_params_example(self) -> dict[str, Any]:
+        return {
+            "network": "ethereum",
+            "token_address": WETH,
+            "indicator": "macd",
+            "interval": "1h",
+            "start": "-6h",
             "limit": 3,
         }
 

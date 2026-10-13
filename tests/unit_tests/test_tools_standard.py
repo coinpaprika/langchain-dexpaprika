@@ -10,9 +10,11 @@ from langchain_tests.unit_tests import ToolsUnitTests
 
 from langchain_dexpaprika import (
     DexPaprikaNetworks,
+    DexPaprikaPoolIndicator,
     DexPaprikaPoolOHLCV,
     DexPaprikaSearch,
     DexPaprikaTokenDetails,
+    DexPaprikaTokenIndicator,
     DexPaprikaTokenOHLCV,
     DexPaprikaTokenPools,
 )
@@ -99,6 +101,48 @@ class TestDexPaprikaTokenOHLCVUnit(ToolsUnitTests):
             "token_address": WETH,
             "start": "2026-07-10",
             "interval": "24h",
+            "limit": 3,
+        }
+
+
+class TestDexPaprikaPoolIndicatorUnit(ToolsUnitTests):
+    @property
+    def tool_constructor(self) -> type[DexPaprikaPoolIndicator]:
+        return DexPaprikaPoolIndicator
+
+    @property
+    def tool_constructor_params(self) -> dict[str, Any]:
+        return {}
+
+    @property
+    def tool_invoke_params_example(self) -> dict[str, Any]:
+        return {
+            "network": "ethereum",
+            "pool_address": USDC_WETH_POOL,
+            "indicator": "rsi",
+            "interval": "1h",
+            "start": "-6h",
+            "limit": 3,
+        }
+
+
+class TestDexPaprikaTokenIndicatorUnit(ToolsUnitTests):
+    @property
+    def tool_constructor(self) -> type[DexPaprikaTokenIndicator]:
+        return DexPaprikaTokenIndicator
+
+    @property
+    def tool_constructor_params(self) -> dict[str, Any]:
+        return {}
+
+    @property
+    def tool_invoke_params_example(self) -> dict[str, Any]:
+        return {
+            "network": "ethereum",
+            "token_address": WETH,
+            "indicator": "macd",
+            "interval": "1h",
+            "start": "-6h",
             "limit": 3,
         }
 
