@@ -8,6 +8,9 @@
 #
 # The `pypi` environment must carry required-reviewer protection in the repo
 # settings so a workflow_dispatch cannot publish without a second approval.
+# That is a hosted setting this file cannot show or enforce, so the publish
+# job also carries its own `if:` restricting it to the main branch or a
+# release tag, as a backstop independent of the environment's configuration.
 #
 # Release flow: merge to main, create a GitHub release with tag vX.Y.Z,
 # this workflow runs checks, builds with uv, and publishes dist/ to PyPI.
@@ -47,6 +50,11 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     needs: [checks]
+    # Defense in depth for workflow_dispatch: only a run against main or a
+    # release tag reaches the publish step, regardless of what ref someone
+    # picks when dispatching manually. A published release already runs
+    # against its tag, so this does not change that path.
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
     environment: pypi
     permissions:
       contents: read
