@@ -112,6 +112,112 @@ def test_dot_segment_token_indicator_rejected() -> None:
     assert "Invalid network" in out
 
 
+# --- empty and encoded-separator identifiers cannot reach the request ---
+
+
+def test_empty_network_rejected_before_request() -> None:
+    requests_made: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requests_made.append(request)
+        return httpx.Response(200, json={"id": WETH})
+
+    tool = DexPaprikaTokenDetails(
+        api_wrapper=DexPaprikaAPIWrapper(transport=httpx.MockTransport(handler))
+    )
+    out = tool.invoke({"network": "", "token_address": WETH})
+    assert "Invalid network" in out
+    assert requests_made == []
+
+
+def test_empty_token_address_rejected_before_request() -> None:
+    requests_made: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requests_made.append(request)
+        return httpx.Response(200, json={"id": WETH})
+
+    tool = DexPaprikaTokenDetails(
+        api_wrapper=DexPaprikaAPIWrapper(transport=httpx.MockTransport(handler))
+    )
+    out = tool.invoke({"network": "ethereum", "token_address": ""})
+    assert "Invalid token_address" in out
+    assert requests_made == []
+
+
+def test_empty_pool_address_rejected_before_request() -> None:
+    requests_made: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requests_made.append(request)
+        return httpx.Response(200, json=[])
+
+    tool = DexPaprikaPoolOHLCV(
+        api_wrapper=DexPaprikaAPIWrapper(transport=httpx.MockTransport(handler))
+    )
+    out = tool.invoke({"network": "ethereum", "pool_address": "", "start": "2026-07-10"})
+    assert "Invalid pool_address" in out
+    assert requests_made == []
+
+
+@pytest.mark.parametrize(
+    "bad",
+    [
+        "a/b",
+        "a\\b",
+        "x?y=1",
+        "x#y",
+        "a%b",
+        "..%2F..%2Fusage",
+        "..%5Cx",
+        "%2e%2e",
+        "a b",
+        "a\tb",
+        "a\x00b",
+    ],
+)
+def test_separator_and_encoded_separator_identifiers_rejected(bad: str) -> None:
+    tool = DexPaprikaTokenDetails(api_wrapper=wrapper_returning({"id": WETH}))
+    out = tool.invoke({"network": bad, "token_address": WETH})
+    assert "Invalid network" in out
+
+    tool2 = DexPaprikaTokenDetails(api_wrapper=wrapper_returning({"id": WETH}))
+    out2 = tool2.invoke({"network": "ethereum", "token_address": bad})
+    assert "Invalid token_address" in out2
+
+
+def test_pool_address_separator_rejected() -> None:
+    tool = DexPaprikaPoolOHLCV(api_wrapper=wrapper_returning([]))
+    out = tool.invoke(
+        {"network": "ethereum", "pool_address": "..%2F..%2Fusage", "start": "2026-07-10"}
+    )
+    assert "Invalid pool_address" in out
+
+
+def test_valid_looking_identifiers_still_accepted() -> None:
+    # Real-shaped EVM and Solana identifiers must keep working after the
+    # stricter validation; this is not a new allowlist of alphanumeric-only.
+    solana_address = "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263"
+    seen: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(request)
+        return httpx.Response(200, json={"id": WETH})
+
+    tool = DexPaprikaTokenDetails(
+        api_wrapper=DexPaprikaAPIWrapper(transport=httpx.MockTransport(handler))
+    )
+    tool.invoke({"network": "solana", "token_address": solana_address})
+    assert len(seen) == 1
+    assert str(seen[0].url.path) == f"/networks/solana/tokens/{solana_address}"
+
+    tool2 = DexPaprikaTokenDetails(
+        api_wrapper=DexPaprikaAPIWrapper(transport=httpx.MockTransport(handler))
+    )
+    tool2.invoke({"network": "ethereum", "token_address": WETH})
+    assert str(seen[1].url.path) == f"/networks/ethereum/tokens/{WETH}"
+
+
 # --- search truncation signal and limit (finding #1) ---
 
 

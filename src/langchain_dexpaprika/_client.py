@@ -16,7 +16,7 @@ import time
 from collections.abc import Mapping
 from importlib import metadata
 from typing import Any
-from urllib.parse import quote
+from urllib.parse import quote, unquote
 
 import httpx
 from langchain_core.tools import ToolException
@@ -75,15 +75,43 @@ def compact_json(data: Any) -> str:
     return json.dumps(data, separators=(",", ":"), ensure_ascii=False, default=str)
 
 
+_PATH_SEGMENT_SEPARATORS = ("/", "\\", "?", "#", "%")
+
+
+def _has_control_char(value: str) -> bool:
+    """True if any character is a C0/C1 control character, DEL included."""
+    return any(ord(ch) < 0x20 or 0x7F <= ord(ch) <= 0x9F for ch in value)
+
+
 def encode_path_segment(value: str, *, field: str) -> str:
-    """Percent-encode one URL path segment, rejecting dot-only segments.
+    """Validate, then percent-encode, one URL path segment.
 
     ``quote(value, safe="")`` leaves "." and ".." untouched because dots are
     unreserved, and httpx then resolves them per RFC 3986, so a bare ".." would
     climb out of the ``/networks/{network}/...`` prefix and hit a different
-    endpoint. Reject any all-dots segment before it reaches the wire.
+    endpoint. An empty segment is just as wrong: it collapses the path to
+    ``/networks//tokens/x`` or ``/networks/ethereum/tokens/``, neither of
+    which names the resource the caller asked for.
+
+    These values are model-chosen tool input, so we do not rely on the
+    gateway to reject what it is handed. We decode the value once with
+    ``unquote`` and reject it outright if the decoded form is empty, is "."
+    or made entirely of dots, or contains a path separator, "?", "#", "%",
+    whitespace, or a control character. That catches a raw separator and an
+    already-percent-encoded one alike (``%2F`` decodes to "/"), so neither
+    reaches the wire disguised as part of the identifier. Only a value that
+    passes this check is percent-encoded for the request.
     """
-    if value and set(value) <= {"."}:
+    decoded = unquote(value)
+    invalid = (
+        not value
+        or not decoded
+        or set(decoded) <= {"."}
+        or any(ch in _PATH_SEGMENT_SEPARATORS for ch in decoded)
+        or any(ch.isspace() for ch in decoded)
+        or _has_control_char(decoded)
+    )
+    if invalid:
         raise ToolException(
             f"Invalid {field} {value!r}: expected a concrete identifier, not a path segment."
         )
